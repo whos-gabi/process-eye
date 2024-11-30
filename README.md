@@ -1,5 +1,4 @@
 # Process Eye 👁️
-<hr>
 
 ## Description
 
