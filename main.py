@@ -7,6 +7,23 @@ from process_info import get_system_info, get_process_info
 import psutil
 import json
 import datetime
+import os
+import sys
+
+def load_ascii_art(filename):
+    if getattr(sys, 'frozen', False):
+        application_path = sys._MEIPASS
+    else:
+        application_path = os.path.dirname(os.path.abspath(__file__))
+
+    file_path = os.path.join(application_path, filename)
+    try:
+        with open(file_path, 'r') as f:
+            ascii_art = f.read().splitlines()
+    except FileNotFoundError:
+        ascii_art = []
+    return ascii_art
+
 
 def main(stdscr):
     # Initialize curses
@@ -58,7 +75,7 @@ def main(stdscr):
                 process_list = [proc for proc in process_list if search_term.lower() in proc['name'].lower() or search_term.lower() in proc['exe'].lower()]
             # Apply sorting
             if sort_column:
-                process_list.sort(key=lambda x: x.get(sort_column, 0), reverse=sort_reverse)
+                process_list.sort(key=lambda x: x.get(sort_column) if x.get(sort_column) is not None else 0, reverse=sort_reverse)
             last_refresh_time = current_time
             need_refresh = False
 
@@ -83,23 +100,17 @@ def main(stdscr):
             col_positions.append((col_keys[idx], x, x + width))
             x += width + 1  # +1 for space
 
-        # Clear screen
         stdscr.erase()
 
-        # Render header
         render_header(stdscr, system_info, max_x, ascii_art)
 
-        # Render table
         start_row = header_height  # Header is fixed height
         render_table(stdscr, process_list, start_row, table_height, scroll_position, max_x, selected_row, sort_column, sort_reverse, col_positions, columns, col_keys, col_widths)
 
-        # Render footer
         render_footer(stdscr, max_y, footer_height, max_x, footer_message)
 
-        # Refresh the screen
         stdscr.refresh()
 
-        # Handle user input
         try:
             key = stdscr.getch()
             if key != -1:
@@ -116,13 +127,13 @@ def main(stdscr):
                         if selected_row < scroll_position:
                             scroll_position -= 1
                 elif key == ord('k'):
-                    # Kill the selected process
                     selected_proc = process_list[selected_row]
                     pid_to_kill = selected_proc['pid']
                     try:
                         p = psutil.Process(pid_to_kill)
                         p.kill()
-                        need_refresh = True  # Force data refresh
+                        # Force data refresh
+                        need_refresh = True  
                     except psutil.AccessDenied:
                         # Can't kill the process
                         pass
@@ -130,8 +141,8 @@ def main(stdscr):
                         # Process no longer exists
                         need_refresh = True  # Force data refresh
                 elif key == ord('/'):
-                    # Search functionality
-                    stdscr.nodelay(False)  # Turn off nodelay to wait for user input
+                    # Search 
+                    stdscr.nodelay(False)  # wait for user input
                     curses.echo()
                     stdscr.addstr(max_y - 2, 0, "Search: ")
                     stdscr.clrtoeol()
